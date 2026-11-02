@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>기술 교과 수업 포털 (Tech Class Portal)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts (Inter & Noto Sans KR) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- ==================== HEADER & NAVBAR ==================== -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Logo / Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-md shadow-indigo-200">
+          <i class="fa-solid fa-microchip"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">기술·공학 수업 포털</span>
+          <span class="text-xs text-slate-400 block -mt-1">Tech & Engineering Edu</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="hidden md:flex items-center space-x-1">
+        <button onclick="switchTab('home')" id="nav-home" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-indigo-600 bg-indigo-50">
+          <i class="fa-solid fa-house mr-1.5"></i> 홈
+        </button>
+        <button onclick="switchTab('tools')" id="nav-tools" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100">
+          <i class="fa-solid fa-screwdriver-wrench mr-1.5"></i> 수업 도구 모음
+        </button>
+        <button onclick="switchTab('assessment')" id="nav-assessment" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100">
+          <i class="fa-solid fa-pen-to-square mr-1.5"></i> 형성평가
+        </button>
+        <button onclick="switchTab('mypage')" id="nav-mypage" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100">
+          <i class="fa-solid fa-user-check mr-1.5"></i> 나의 학습/승인
+        </button>
+      </nav>
+
+      <!-- Auth Action Box -->
+      <div class="flex items-center space-x-2">
+        <!-- Logged OUT state buttons -->
+        <div id="auth-buttons-out" class="flex items-center space-x-2">
+          <button onclick="openLoginModal()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-medium shadow-sm transition">
+            <i class="fa-solid fa-right-to-bracket mr-1"></i> 로그인 / 가입
+          </button>
+        </div>
+
+        <!-- Logged IN state user badge -->
+        <div id="auth-buttons-in" class="hidden items-center space-x-3">
+          <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+            <img id="user-avatar" src="https://placehold.co/100x100/4f46e5/ffffff?text=User" class="w-6 h-6 rounded-full" alt="User">
+            <span id="user-name" class="text-xs font-semibold text-slate-700">학생</span>
+            <span id="user-status-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-700 font-bold">승인 대기</span>
+          </div>
+          <button onclick="handleLogout()" class="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 text-sm transition" title="로그아웃">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Trigger -->
+        <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Menu -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 pt-2 pb-4 space-y-1">
+      <button onclick="switchTab('home')" class="w-full text-left px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 text-sm font-medium">홈</button>
+      <button onclick="switchTab('tools')" class="w-full text-left px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 text-sm font-medium">수업 도구 모음</button>
+      <button onclick="switchTab('assessment')" class="w-full text-left px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 text-sm font-medium">형성평가</button>
+      <button onclick="switchTab('mypage')" class="w-full text-left px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 text-sm font-medium">나의 학습/승인</button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTAINER ==================== -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Supabase Setup Warning Banner (Informational) -->
+    <div id="supabase-config-banner" class="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs sm:text-sm flex items-start space-x-3">
+      <i class="fa-solid fa-circle-info text-amber-500 text-lg mt-0.5"></i>
+      <div class="flex-grow">
+        <strong class="font-bold">Supabase 연동 안내:</strong> 현재는 예시용 데모 모드로 작동 중입니다. 실제 카카오/구글 로그인을 연결하려면 코드 하단의 <code class="bg-amber-100 px-1 py-0.5 rounded">SUPABASE_URL</code>과 <code class="bg-amber-100 px-1 py-0.5 rounded">SUPABASE_ANON_KEY</code>에 본인의 Supabase 프로젝트 정보를 입력해 주세요.
+      </div>
+      <button onclick="document.getElementById('supabase-config-banner').remove()" class="text-amber-500 hover:text-amber-700"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- TAB 1: HOME (수업 소개 & 개요) -->
+    <section id="tab-home" class="tab-content space-y-8">
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-blue-900 text-white p-8 sm:p-12 shadow-xl">
+        <div class="relative z-10 max-w-2xl">
+          <span class="inline-block px-3 py-1 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-semibold mb-4 border border-indigo-400/30">
+            2026학년도 중·고등학교 기술·가정 (기술 영역)
+          </span>
+          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight mb-4">
+            세상을 바꾸는 공학,<br><span class="text-indigo-300">기술 수업 포털</span>에 오신 것을 환영합니다!
+          </h1>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+            제조, 건설, 수송, 정보통신, 생명기술 등 창의적인 문제 해결 능력을 키우는 디지털 학습 공간입니다. 소셜 로그인을 통해 로그인 후 선생님 승인을 받아 다양한 실습 도구와 형성평가를 이용해 보세요.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="switchTab('tools')" class="px-5 py-3 rounded-xl bg-white text-indigo-900 font-bold text-sm shadow-md hover:bg-slate-100 transition">
+              <i class="fa-solid fa-cubes mr-2"></i>수업 도구 둘러보기
+            </button>
+            <button onclick="switchTab('assessment')" class="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-md hover:bg-indigo-500 transition border border-indigo-400/30">
+              <i class="fa-solid fa-file-pen mr-2"></i>오늘의 형성평가
+            </button>
+          </div>
+        </div>
+        <!-- Background Illustration Icon -->
+        <i class="fa-solid fa-gears absolute -right-8 -bottom-8 text-white/5 text-[220px] pointer-events-none"></i>
+      </div>
+
+      <!-- Current Learning Units Grid -->
+      <div>
+        <h2 class="text-xl font-bold text-slate-900 mb-4 flex items-center">
+          <i class="fa-solid fa-bookmark text-indigo-600 mr-2"></i>주요 학습 단원 안내
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Card 1 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-4 font-bold">
+              <i class="fa-solid fa-cube"></i>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-2">1. 제조 기술과 3D 모델링</h3>
+            <p class="text-slate-500 text-sm leading-relaxed mb-4">
+              재료의 특성을 이해하고 Tinkercad를 활용하여 직접 아이디어를 3D 모델링으로 구현합니다.
+            </p>
+            <span class="inline-flex items-center text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
+              <i class="fa-solid fa-clock mr-1"></i> 1~4차시 진행 중
+            </span>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4 font-bold">
+              <i class="fa-solid fa-wifi"></i>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-2">2. 정보 통신 & 아두이노</h3>
+            <p class="text-slate-500 text-sm leading-relaxed mb-4">
+              센서와 액추에이터의 원리를 배우고 가상 시뮬레이터(Tinkercad Circuits)로 제어 알고리즘을 만듭니다.
+            </p>
+            <span class="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
+              <i class="fa-solid fa-clock mr-1"></i> 5~8차시 예정
+            </span>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl mb-4 font-bold">
+              <i class="fa-solid fa-car-side"></i>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-2">3. 수송 기술과 자율주행</h3>
+            <p class="text-slate-500 text-sm leading-relaxed mb-4">
+              수송 수단의 프레임 및 동력 전달 장치의 구조를 분석하고 친환경 미래 자동차를 디자인합니다.
+            </p>
+            <span class="inline-flex items-center text-xs font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-md">
+              <i class="fa-solid fa-clock mr-1"></i> 9~12차시 예정
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: CLASS TOOLS (수업 도구 모음) -->
+    <section id="tab-tools" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">수업 활용 도구 및 자료실</h2>
+          <p class="text-slate-500 text-sm">실습에 필요한 3D 시뮬레이터, 회로 설계, 소스코드 및 제출 링크 모음입니다.</p>
+        </div>
+        <!-- Search & Filter -->
+        <div class="flex items-center space-x-2">
+          <input type="text" id="tool-search" placeholder="도구 검색..." onkeyup="filterTools()" class="px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48">
+        </div>
+      </div>
+
+      <!-- Protected Content Alert for Unapproved users -->
+      <div id="approval-lock-notice" class="hidden p-4 rounded-xl bg-slate-100 border border-slate-300 text-slate-600 text-sm flex items-center space-x-3">
+        <i class="fa-solid fa-lock text-slate-400 text-xl"></i>
+        <div>
+          <strong>[접근 제한 알림]</strong> 로그인 후 관리자(교사) 승인이 완료된 학생만 실습 파일 다운로드 및 상세 링크에 접근할 수 있습니다.
+        </div>
+      </div>
+
+      <!-- Tools Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tools-grid">
+        
+        <!-- Tool Item 1 -->
+        <div class="tool-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+          <div class="p-5 flex-grow">
+            <div class="flex justify-between items-start mb-3">
+              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-700">3D 모델링</span>
+              <span class="text-xs text-slate-400"><i class="fa-solid fa-globe"></i> Web-Based</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-1">Tinkercad 3D Design</h3>
+            <p class="text-slate-500 text-xs mb-4">웹 브라우저에서 직관적으로 입체 도형을 만들어 3D 프린팅용 STL 파일로 변환하는 소프트웨어입니다.</p>
+          </div>
+          <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500 font-medium">제조 기술 단원</span>
+            <a href="https://www.tinkercad.com" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition">
+              바로가기 <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tool Item 2 -->
+        <div class="tool-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+          <div class="p-5 flex-grow">
+            <div class="flex justify-between items-start mb-3">
+              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700">회로 시뮬레이션</span>
+              <span class="text-xs text-slate-400"><i class="fa-solid fa-microchip"></i> Hardware</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-1">Tinkercad Circuits (아두이노)</h3>
+            <p class="text-slate-500 text-xs mb-4">실제 실물 부품 없이도 LED, 저항, 센서 및 아두이노 보드를 가상으로 가동해 보는 시뮬레이터입니다.</p>
+          </div>
+          <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500 font-medium">정보통신 단원</span>
+            <a href="https://www.tinkercad.com/circuits" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition">
+              바로가기 <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tool Item 3 -->
+        <div class="tool-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+          <div class="p-5 flex-grow">
+            <div class="flex justify-between items-start mb-3">
+              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-purple-100 text-purple-700">블록 코딩</span>
+              <span class="text-xs text-slate-400"><i class="fa-solid fa-laptop-code"></i> Software</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-1">Entry (엔트리) 피지컬 교구</h3>
+            <p class="text-slate-500 text-xs mb-4">센서 데이터를 수집하고 블록 코딩을 통해 하드웨어를 제어하는 기초 소프트웨어 교육 도구입니다.</p>
+          </div>
+          <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500 font-medium">소프트웨어 단원</span>
+            <a href="https://playentry.org" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition">
+              바로가기 <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tool Item 4 -->
+        <div class="tool-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+          <div class="p-5 flex-grow">
+            <div class="flex justify-between items-start mb-3">
+              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-700">수업 학습지</span>
+              <span class="text-xs text-slate-400"><i class="fa-solid fa-file-pdf"></i> PDF</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg mb-1">제조 기술 투시도법 학습지</h3>
+            <p class="text-slate-500 text-xs mb-4">등각투시도 및 등구투시도 그리기 연습용 활동지 파일입니다 (승인 회원 전용 다운로드).</p>
+          </div>
+          <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500 font-medium">학습 자료</span>
+            <button onclick="downloadMaterial('투시도법_학습지.pdf')" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition">
+              <i class="fa-solid fa-download mr-1"></i> 다운로드
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: FORMATIVE ASSESSMENT (형성평가 탭) -->
+    <section id="tab-assessment" class="tab-content hidden space-y-6">
+      <div class="border-b border-slate-200 pb-4">
+        <h2 class="text-2xl font-bold text-slate-900">오늘의 기술 형성평가</h2>
+        <p class="text-slate-500 text-sm">수업 시간에 배운 개념을 확인하는 실시간 평가 문제입니다. 제출 시 자동 채점됩니다.</p>
+      </div>
+
+      <!-- Quiz Form Container -->
+      <div class="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+        <form id="quiz-form" onsubmit="submitQuiz(event)" class="space-y-8">
+          
+          <!-- Question 1 -->
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">Q1</span>
+              <h3 class="font-bold text-slate-800">다음 중 재료의 물리적 성질에 대한 설명으로 옳은 것은?</h3>
+            </div>
+            <div class="space-y-2 pl-2">
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q1" value="1" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">① 연성은 외부 힘에 의해 깨지는 성질을 말한다.</span>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q1" value="2" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">② 전성은 재료가 가늘고 길게 늘어나는 성질이다.</span>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q1" value="3" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">③ 경도는 물체의 표면이 단단한 정도를 나타낸다.</span>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q1" value="4" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">④ 인성은 물체가 녹는 온도를 의미한다.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Question 2 -->
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">Q2</span>
+              <h3 class="font-bold text-slate-800">아두이노(Arduino) 디지털 핀의 출력을 온(HIGH)/오프(LOW)로 제어할 때 사용하는 함수는?</h3>
+            </div>
+            <div class="space-y-2 pl-2">
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q2" value="1" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">① analogRead()</span>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q2" value="2" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">② digitalWrite()</span>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q2" value="3" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">③ pinMode()</span>
+              </label>
+              <label class="flex items-center space-x-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                <input type="radio" name="q2" value="4" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-slate-700">④ delay()</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-4 border-t border-slate-200 flex justify-end">
+            <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shadow-md transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>평가 제출하기</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Quiz Result Box (Hidden by default) -->
+        <div id="quiz-result" class="hidden mt-6 p-6 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-4">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-2xl font-bold">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-800">형성평가가 제출되었습니다!</h3>
+          <p class="text-2xl font-black text-indigo-600" id="quiz-score-text">100 / 100점</p>
+          <p class="text-xs text-slate-500" id="quiz-feedback">수고하셨습니다. 개념을 정확히 이해하셨네요!</p>
+          <button onclick="resetQuiz()" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300">다시 풀기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MY PAGE & APPROVAL STATUS (마이페이지 & 승인 관리) -->
+    <section id="tab-mypage" class="tab-content hidden space-y-6">
+      <div class="border-b border-slate-200 pb-4">
+        <h2 class="text-2xl font-bold text-slate-900">나의 학습 상태 & 승인 현황</h2>
+        <p class="text-slate-500 text-sm">내 계정 정보 및 관리자(교사) 승인 상태를 확인합니다.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- User Profile Card -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center space-x-4">
+            <img id="mypage-avatar" src="https://placehold.co/100x100/4f46e5/ffffff?text=User" class="w-14 h-14 rounded-full border border-slate-200" alt="Avatar">
+            <div>
+              <h3 id="mypage-name" class="font-bold text-slate-800 text-lg">비로그인 상태</h3>
+              <p id="mypage-email" class="text-xs text-slate-400">로그인이 필요합니다.</p>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-slate-100 space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-500">계정 역할:</span>
+              <span id="mypage-role" class="font-semibold text-slate-700">학생 (Student)</span>
+            </div>
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-500">교사 승인 상태:</span>
+              <span id="mypage-approved" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">미승인 (대기 중)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teacher Simulation Panel (Demo Mode Feature) -->
+        <div class="md:col-span-2 bg-gradient-to-br from-indigo-50 to-slate-50 p-6 rounded-2xl border border-indigo-100 shadow-sm space-y-4">
+          <div class="flex items-center space-x-2 text-indigo-900">
+            <i class="fa-solid fa-user-shield text-indigo-600 text-lg"></i>
+            <h3 class="font-bold text-base">교사 승인 테스트 시뮬레이터 (데모용)</h3>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            실제 운영 시에는 교사가 Supabase 데이터베이스(<code class="bg-white px-1 py-0.5 rounded border">profiles</code> 테이블)에서 학생의 <code class="bg-white px-1 py-0.5 rounded border">is_approved</code> 값을 <code class="text-indigo-600 font-bold">true</code>로 변경해야 작동합니다. 테스트를 위해 아래 버튼으로 승인 상태 변경을 시뮬레이션해 보세요!
+          </p>
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button onclick="toggleApprovalSimulation(true)" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-sm transition">
+              <i class="fa-solid fa-check mr-1"></i> [교사] 학생 승인 처리 시뮬레이션
+            </button>
+            <button onclick="toggleApprovalSimulation(false)" class="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 shadow-sm transition">
+              <i class="fa-solid fa-xmark mr-1"></i> [교사] 승인 취소/대기 변경
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12">
+    <div class="max-w-7xl mx-auto px-4 text-center text-slate-400 text-xs space-y-1">
+      <p>© 2026 기술·공학 교과 수업 포털. All rights reserved.</p>
+      <p>Powered by Supabase Auth & Tailwind CSS</p>
+    </div>
+  </footer>
+
+  <!-- ==================== LOGIN MODAL ==================== -->
+  <div id="login-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+      
+      <!-- Close Button -->
+      <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center text-xl font-bold mb-3">
+          <i class="fa-solid fa-right-to-bracket"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-800">기술 수업 포털 로그인</h3>
+        <p class="text-xs text-slate-500 mt-1">학교 소셜 계정을 선택하여 로그인해 주세요.</p>
+      </div>
+
+      <!-- Social Login Buttons -->
+      <div class="space-y-3">
+        
+        <!-- Google Login Button -->
+        <button onclick="loginWithProvider('google')" class="w-full py-3 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold flex items-center justify-center space-x-3 transition shadow-sm">
+          <svg class="w-5 h-5" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Google 계정으로 로그인</span>
+        </button>
+
+        <!-- Kakao Login Button -->
+        <button onclick="loginWithProvider('kakao')" class="w-full py-3 px-4 rounded-xl bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] text-sm font-semibold flex items-center justify-center space-x-3 transition shadow-sm">
+          <i class="fa-solid fa-comment text-lg"></i>
+          <span>카카오 계정으로 로그인</span>
+        </button>
+
+        <!-- Mock Login Button (For Offline Preview Test) -->
+        <div class="relative flex py-2 items-center">
+          <div class="flex-grow border-t border-slate-200"></div>
+          <span class="flex-shrink mx-4 text-[10px] text-slate-400">또는 바로 테스트해보기</span>
+          <div class="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <button onclick="demoLogin()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition">
+          <i class="fa-solid fa-user-check mr-1"></i> 데모 학생 계정으로 간편 로그인
+        </button>
+
+      </div>
+
+      <p class="text-[11px] text-slate-400 text-center mt-6">
+        로그인 시 교사의 승인이 완료될 때까지 학습 자료 이용이 제한될 수 있습니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- Custom Alert Toast Component -->
+  <div id="toast-message" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl text-sm flex items-center space-x-3">
+    <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <span id="toast-text">메시지</span>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    /* ----------------------------------------------------
+       1. SUPABASE INITIALIZATION
+       ---------------------------------------------------- */
+    // TODO: Replace with your actual Supabase URL & Key from your dashboard
+    const SUPABASE_URL = "https://your-supabase-project.supabase.co";
+    const SUPABASE_ANON_KEY = "your-anon-key";
+    
+    // Initialize client (gracefully handles placeholder keys for demo)
+    let supabase = null;
+    try {
+      if (SUPABASE_URL.includes("your-supabase-project")) {
+        console.warn("Supabase keys are placeholders. Operating in Mock Demo Mode.");
+      } else {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch(e) {
+      console.error("Supabase Initialization error", e);
+    }
+
+    // App State Variables
+    let currentUser = null;
+    let isApproved = false; // Teacher approval status
+
+    /* ----------------------------------------------------
+       2. TAB NAVIGATION SYSTEM
+       ---------------------------------------------------- */
+    function switchTab(tabId) {
+      // Hide all contents
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      
+      // Reset nav button styles
+      const navButtons = ['home', 'tools', 'assessment', 'mypage'];
+      navButtons.forEach(id => {
+        const btn = document.getElementById(`nav-${id}`);
+        if(btn) {
+          btn.className = "px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100";
+        }
+      });
+
+      // Show selected content & highlight nav
+      const selectedTab = document.getElementById(`tab-${tabId}`);
+      const selectedBtn = document.getElementById(`nav-${tabId}`);
+      
+      if(selectedTab) selectedTab.classList.remove('hidden');
+      if(selectedBtn) selectedBtn.className = "px-4 py-2 rounded-lg text-sm font-medium transition-colors text-indigo-600 bg-indigo-50";
+
+      // Hide mobile menu if open
+      document.getElementById('mobile-menu').classList.add('hidden');
+    }
+
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    /* ----------------------------------------------------
+       3. AUTHENTICATION LOGIC (SUPABASE OAUTH & DEMO)
+       ---------------------------------------------------- */
+    function openLoginModal() {
+      document.getElementById('login-modal').classList.remove('hidden');
+    }
+
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.add('hidden');
+    }
+
+    // Real Supabase OAuth Login Call
+    async function loginWithProvider(provider) {
+      if (!supabase) {
+        showToast("Supabase 설정이 필요합니다. 데모 로그인을 사용해보세요!");
+        return;
+      }
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: window.location.href // Redirect back to this page
+          }
+        });
+        if (error) throw error;
+      } catch (err) {
+        alert("로그인 처리 오류: " + err.message);
+      }
+    }
+
+    // Mock Demo Login for immediate UI testing
+    function demoLogin() {
+      currentUser = {
+        name: "김기술 (학생)",
+        email: "tech_student@school.es.kr",
+        avatar: "https://placehold.co/100x100/4f46e5/ffffff?text=Tech"
+      };
+      isApproved = false; // Default to unapproved state to test flow
+      updateUIForUserState();
+      closeLoginModal();
+      showToast("데모 학생 계정으로 로그인되었습니다.");
+    }
+
+    function handleLogout() {
+      if(supabase) {
+        supabase.auth.signOut();
+      }
+      currentUser = null;
+      isApproved = false;
+      updateUIForUserState();
+      showToast("로그아웃 되었습니다.");
+    }
+
+    // Update UI elements based on authentication state
+    function updateUIForUserState() {
+      const authOutBtns = document.getElementById('auth-buttons-out');
+      const authInBtns = document.getElementById('auth-buttons-in');
+      const approvalNotice = document.getElementById('approval-lock-notice');
+
+      if (currentUser) {
+        // Logged in
+        authOutBtns.classList.add('hidden');
+        authInBtns.classList.remove('hidden');
+        document.getElementById('user-name').innerText = currentUser.name;
+        document.getElementById('user-avatar').src = currentUser.avatar;
+
+        // Update Mypage
+        document.getElementById('mypage-name').innerText = currentUser.name;
+        document.getElementById('mypage-email').innerText = currentUser.email;
+        document.getElementById('mypage-avatar').src = currentUser.avatar;
+
+        // Approval status badge
+        const badge = document.getElementById('user-status-badge');
+        const mypageApproved = document.getElementById('mypage-approved');
+
+        if (isApproved) {
+          badge.className = "px-2 py-0.5 text-[10px] rounded-full bg-emerald-100 text-emerald-700 font-bold";
+          badge.innerText = "승인 완료";
+          mypageApproved.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700";
+          mypageApproved.innerText = "승인 완료 (모든 자료 접근 가능)";
+          if(approvalNotice) approvalNotice.classList.add('hidden');
+        } else {
+          badge.className = "px-2 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-700 font-bold";
+          badge.innerText = "승인 대기";
+          mypageApproved.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700";
+          mypageApproved.innerText = "미승인 (교사의 승인이 필요합니다)";
+          if(approvalNotice) approvalNotice.classList.remove('hidden');
+        }
+
+      } else {
+        // Logged out
+        authOutBtns.classList.remove('hidden');
+        authInBtns.classList.add('hidden');
+        document.getElementById('mypage-name').innerText = "비로그인 상태";
+        document.getElementById('mypage-email').innerText = "로그인이 필요합니다.";
+        if(approvalNotice) approvalNotice.classList.add('hidden');
+      }
+    }
+
+    // Teacher approval simulator toggle
+    function toggleApprovalSimulation(approvedStatus) {
+      if (!currentUser) {
+        alert("먼저 로그인을 진행해 주세요!");
+        openLoginModal();
+        return;
+      }
+      isApproved = approvedStatus;
+      updateUIForUserState();
+      showToast(isApproved ? "교사 승인이 완료되었습니다!" : "승인 대기 상태로 전환되었습니다.");
+    }
+
+    /* ----------------------------------------------------
+       4. FORMATIVE ASSESSMENT (QUIZ) LOGIC
+       ---------------------------------------------------- */
+    function submitQuiz(event) {
+      event.preventDefault();
+      
+      const form = event.target;
+      const q1 = form.q1.value;
+      const q2 = form.q2.value;
+
+      if (!q1 || !q2) {
+        alert("모든 문제를 선택한 뒤 제출해 주세요.");
+        return;
+      }
+
+      let score = 0;
+      if (q1 === "3") score += 50; // Q1 Answer: 3 (경도)
+      if (q2 === "2") score += 50; // Q2 Answer: 2 (digitalWrite)
+
+      const resultBox = document.getElementById('quiz-result');
+      const scoreText = document.getElementById('quiz-score-text');
+      const feedback = document.getElementById('quiz-feedback');
+
+      scoreText.innerText = `${score} / 100점`;
+      if (score === 100) {
+        feedback.innerText = "참 잘했습니다! 수업 핵심 개념을 완전히 이해하셨습니다.";
+      } else {
+        feedback.innerText = "오답을 확인하고 수업 자료실의 개념 정리를 다시 확인해 보세요!";
+      }
+
+      form.classList.add('hidden');
+      resultBox.classList.remove('hidden');
+    }
+
+    function resetQuiz() {
+      const form = document.getElementById('quiz-form');
+      const resultBox = document.getElementById('quiz-result');
+      form.reset();
+      resultBox.classList.add('hidden');
+      form.classList.remove('hidden');
+    }
+
+    /* ----------------------------------------------------
+       5. UTILITY & SEARCH FUNCTIONS
+       ---------------------------------------------------- */
+    function filterTools() {
+      const query = document.getElementById('tool-search').value.toLowerCase();
+      const cards = document.querySelectorAll('.tool-card');
+      
+      cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        if (text.includes(query)) {
+          card.style.display = "flex";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+
+    function downloadMaterial(filename) {
+      if (!currentUser) {
+        alert("자료를 다운로드하려면 먼저 로그인해 주세요.");
+        openLoginModal();
+        return;
+      }
+      if (!isApproved) {
+        alert("교사 승인이 완료된 후 다운로드할 수 있습니다. [나의 학습/승인] 탭에서 상태를 확인하세요.");
+        return;
+      }
+      showToast(`${filename} 다운로드를 시작합니다.`);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast-message');
+      const toastText = document.getElementById('toast-text');
+      toastText.innerText = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    /* ----------------------------------------------------
+       6. ON PAGE LOAD CHECK SUPABASE SESSION
+       ---------------------------------------------------- */
+    window.onload = async function() {
+      if (supabase) {
+        // Check for active session in real Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          currentUser = {
+            name: session.user.user_metadata.full_name || session.user.email.split('@')[0],
+            email: session.user.email,
+            avatar: session.user.user_metadata.avatar_url || "https://placehold.co/100x100/4f46e5/ffffff?text=User"
+          };
+          // Fetch profiles table for approval status
+          const { data: profile } = await supabase.from('profiles').select('is_approved').eq('id', session.user.id).single();
+          if (profile) {
+            isApproved = profile.is_approved;
+          }
+          updateUIForUserState();
+        }
+      }
+    };
+  </script>
+</body>
+</html>
